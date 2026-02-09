@@ -1,73 +1,272 @@
-# whatsapp-group-messaging
+# WhatsApp Group Messaging com Twilio Conversations
 
-With Twilio's [Conversations API](https://www.twilio.com/docs/conversations/using-whatsapp-conversations), you can implement group chats in WhatsApp, a feature which is not offered natively in WhatsApp's API. With this code sample, you can implement multi-participant chat for up to 50 people that users can opt into and communicate through a single Twilio WhatsApp sender (business profile).
-## Prerequisites
-Before moving forward, you are going to need the following, which may take some time to be approved if you don't already have them:
-- A WhatsApp Business Profile - [you can request access here](https://www.twilio.com/whatsapp/request-access)
-- A WhatsApp Sender for your Business Profile - [request access here](https://www.twilio.com/console/sms/whatsapp/senders)
-- A WhatsApp [Content Template](https://www.twilio.com/docs/content/send-templates-created-with-the-content-template-builder#send-messages-with-a-messaging-service-in-the-from-field) for initiating the conversation - [create a Quick reply template here](https://console.twilio.com/us1/develop/sms/content-template-builder/template/create).
-You will have to wait for these to be approved before you are able to write code for WhatsApp with the Conversations API.
+Sistema completo de grupos multi-canal que permite conversas entre participantes via **WhatsApp** e **Web** simultaneamente, usando a [Twilio Conversations API](https://www.twilio.com/docs/conversations).
 
-Once that's taken care of, you can begin setting up your project. These code samples are all built to run within the Twilio Ecosystem using [Twilio Functions](https://www.twilio.com/docs/runtime/functions) and [Twilio Sync](https://www.twilio.com/docs/sync).
-## Configuration
-### Creating the Functions
-Create a [Twilio Functions Service](https://www.twilio.com/console/functions/overview/services), and then add three functions, one for each `.js` file in the `Functions` folder of this repository. Make sure the privacy for the Function corresponding to `createConversation.js` is set to "Public", and the other two are "Protected".
+## 🌟 Funcionalidades
 
-### Replacing placeholder code for phone numbers
-After copying/pasting the code for these Functions, you are going to want to change the values inside the `numbers` array to the WhatsApp numbers of the users you want to add to the Conversation. As these code samples are a proof of concept to get you up and running, the values for your users' phone numbers are going to be hard-coded for now. You can change this to fit your needs depending on where your users' phone numbers are stored.
+- ✅ Grupos com até 50 participantes (WhatsApp + Web)
+- ✅ Interface web visual para gestão de grupos
+- ✅ Criação dinâmica de grupos com nomes personalizados
+- ✅ Adicionar/remover participantes em tempo real
+- ✅ Mensagens bidirecionais entre todos os canais
+- ✅ Roteamento inteligente via webhook
+- ✅ Suporte a múltiplos grupos simultâneos
 
-### Adding your WhatsApp Sender to a Messaging Service
-Under [Messaging Services](https://www.twilio.com/console/sms/services) in your Twilio Console, add your WhatsApp number as a Sender to one of your Messaging Services.
+## 📋 Pré-requisitos
 
-### Webhooks
-On the page for your Messaging Service, click "Integration" and select "Send a webhook". Enter the URL for your Twilio Function corresponding to `joinConversation.js` and hit "Save". 
+### 1. Aprovações da Twilio (pode levar alguns dias)
 
-Now in your [Conversations configuration](https://www.twilio.com/console/conversations/configuration/webhooks), set your Pre-Event webhook to the url corresponding to `message.js`, and in the Pre-webhooks section, select `onMessageAdd`.
+- **WhatsApp Business Profile** - [Solicitar acesso](https://www.twilio.com/whatsapp/request-access)
+- **WhatsApp Sender** - [Solicitar aqui](https://www.twilio.com/console/sms/whatsapp/senders)
 
-### Setting up Twilio Sync
-First you'll need to create a [Sync Service](https://www.twilio.com/docs/sync/api/service), which can be done with the following command using the [Twilio CLI](https://twil.io/cli):
-```shell
-twilio api:sync:v1:services:create
+### 2. Ferramentas necessárias
+
+- Node.js (v14 ou superior)
+- [Twilio CLI](https://www.twilio.com/docs/twilio-cli/quickstart) instalada
+- Conta Twilio com credenciais (Account SID e Auth Token)
+
+## 🚀 Instalação e Configuração
+
+### Passo 1: Clonar o repositório
+
+```bash
+git clone https://github.com/guucwb/whatsapp-group-messaging.git
+cd whatsapp-group-messaging
+npm install
 ```
-Or with the following Node.js code using the Twilio helper library:
-```JavaScript
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = require('twilio')(accountSid, authToken);
 
-client.sync.v1.services.create().then(service => console.log(service.sid));
+### Passo 2: Criar recursos da Twilio
+
+#### 2.1 Criar Conversations Service
+
+```bash
+twilio api:conversations:v1:services:create --friendly-name "WhatsApp Group Messaging"
 ```
-Make sure you save this SID to be used as an environment variable.
 
-Next, create a [Sync Map](https://www.twilio.com/docs/sync/api/map-resource) with the following Twilio CLI command:
-```shell
+Salve o `SID` retornado (começa com `IS...`)
+
+#### 2.2 Criar Sync Service
+
+```bash
+twilio api:sync:v1:services:create --friendly-name "WhatsApp Groups Sync"
+```
+
+Salve o `SID` retornado (começa com `IS...`)
+
+#### 2.3 Criar Sync Map
+
+```bash
 twilio api:sync:v1:services:maps:create \
-   --service-sid ISXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  --service-sid <SEU_SYNC_SERVICE_SID> \
+  --unique-name participants
 ```
-Or with the following Node.js code:
-```JavaScript
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = require('twilio')(accountSid, authToken);
 
-client.sync.v1.services('ISXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
-         .syncMaps
-         .create()
-         .then(sync_map => console.log(sync_map.sid));
+Salve o `SID` retornado (começa com `MP...`)
+
+#### 2.4 Criar Messaging Service
+
+```bash
+twilio api:messaging:v1:services:create --friendly-name "WhatsApp Groups"
 ```
-Save this SID as well to be used as an environment variable.
 
-### Environment Variables
-Make sure the environment variables in your Functions Service are set correctly:</br>
-`SYNC_MAP_SID` - SID for the Sync Map you created.</br>
-`TWILIO_SERVICE_SID` - SID for your Twilio Sync Service.</br>
-`WHATSAPP_NUMBER` - Phone number for your WhatsApp Sender.</br>
-`MESSAGE_SERVICE_SID` - SID of your Messaging Service.</br>
-`CONTENT_SID` - SID of your Content Template.
+Salve o `SID` retornado (começa com `MG...`)
 
-## Running the Code
-When you are finally ready to run the code and initiate WhatsApp group messaging, copy the URL for your Function for `createConversation.js` and visit it in your web browser to run the code. It should start a Conversation, add each of the phone numbers you entered as participants in the Conversation, and send an initial message to each of them of the template that you created. 
+#### 2.5 Criar API Key (para tokens de acesso)
 
-My message, for example, sent a button that the user could click to respond with "Join the conversation", which would then trigger the Function for `message.js`.
+```bash
+twilio api:core:keys:create --friendly-name "WhatsApp Groups API Key"
+```
 
-You should now have a WhatsApp group chat using the Twilio Conversations API.
+Salve o `SID` e o `Secret` retornados.
+
+### Passo 3: Configurar variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```env
+ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SYNC_SERVICE_SID=ISxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SYNC_MAP_SID=MPxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+CONVERSATIONS_SERVICE_SID=ISxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+WHATSAPP_NUMBER=+5541XXXXXXXXX
+MESSAGE_SERVICE_SID=MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_API_KEY=SKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_API_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### Passo 4: Deploy das Functions
+
+```bash
+twilio serverless:deploy
+```
+
+Isso irá fazer deploy de todas as functions e retornar a URL do serviço (ex: `https://whatsapp-group-messaging-XXXX-dev.twil.io`)
+
+### Passo 5: Configurar webhook no WhatsApp
+
+Substitua `<SEU_WHATSAPP_NUMBER>` e `<SUA_URL>` pelos valores corretos:
+
+```bash
+twilio api:core:incoming-phone-numbers:update \
+  --phone-number=<SEU_WHATSAPP_NUMBER> \
+  --sms-url=<SUA_URL>/joinConversation \
+  --sms-method=POST
+```
+
+Exemplo:
+```bash
+twilio api:core:incoming-phone-numbers:update \
+  --phone-number=+5541991039019 \
+  --sms-url=https://whatsapp-group-messaging-6486-dev.twil.io/joinConversation \
+  --sms-method=POST
+```
+
+### Passo 6: Configurar Pre-Event Webhook (Conversations)
+
+1. Acesse [Conversations Configuration](https://www.twilio.com/console/conversations/configuration/webhooks)
+2. Em **Pre-Event Webhooks**, configure:
+   - **Webhook URL**: `<SUA_URL>/message`
+   - **Method**: POST
+   - Marque apenas: `onMessageAdd`
+
+## 🎯 Como Usar
+
+### Acessar a interface web
+
+Abra no navegador: `https://<SUA_URL>/index.html`
+
+### Criar um grupo
+
+1. Clique em **"Criar Novo Grupo"**
+2. Digite o nome do grupo
+3. Adicione participantes (nome + número WhatsApp no formato `+5541XXXXXXXXX`)
+4. Clique em **"Criar Grupo"**
+5. Você será redirecionado automaticamente para o grupo criado
+
+### Gerenciar grupos
+
+- **Listar grupos**: Clique em "Manage Groups"
+- **Conectar a grupo**: Clique em "Connect" no grupo desejado
+- **Deletar grupo**: Clique em "Delete" no grupo desejado
+- **Deletar todos**: Clique em "Delete All Groups" (pede confirmação dupla)
+
+### Adicionar participantes a grupo existente
+
+1. Conecte ao grupo
+2. Clique em **"Add Participant"**
+3. Digite nome e número WhatsApp
+4. O participante receberá convite no WhatsApp
+
+### Remover participantes
+
+1. Conecte ao grupo
+2. Na lista de participantes, clique em **"Remove"** ao lado do participante
+
+## 📁 Estrutura do Projeto
+
+```
+.
+├── functions/
+│   ├── createConversation.js    # Cria grupo e adiciona participantes
+│   ├── joinConversation.js      # Webhook para mensagens WhatsApp
+│   ├── addParticipant.js        # Adiciona participante a grupo
+│   ├── removeParticipant.js     # Remove participante de grupo
+│   ├── listConversations.js     # Lista todos os grupos
+│   ├── deleteConversation.js    # Deleta um grupo
+│   ├── getToken.js              # Gera token de acesso para web
+│   └── message.js               # Formata mensagens com nome
+├── assets/
+│   └── index.html               # Interface web completa
+├── package.json                 # Dependências
+└── README.md                    # Este arquivo
+```
+
+## 🔧 Arquitetura Técnica
+
+### Fluxo de mensagens
+
+#### Web → WhatsApp
+1. Admin envia mensagem na interface web
+2. Conversations SDK adiciona mensagem na Conversation
+3. Twilio envia mensagem automaticamente para todos os participantes WhatsApp
+
+#### WhatsApp → Web
+1. Participante WhatsApp envia mensagem
+2. Webhook `/joinConversation` é acionado
+3. Webhook busca no Sync Map qual grupo o participante pertence
+4. Webhook adiciona mensagem na Conversation correta
+5. Todos os participantes (WhatsApp + Web) recebem a mensagem
+
+### Componentes principais
+
+**Conversations Service**: Gerencia todas as conversas (grupos)
+
+**Sync Map**: Mapeia `whatsapp:+5541XXX` → `conversationSid`
+- Permite o webhook saber qual grupo cada participante pertence
+
+**messagingBinding**: Configuração crítica nos participantes
+```javascript
+{
+  'messagingBinding.address': 'whatsapp:+5541991039019',
+  'messagingBinding.proxyAddress': 'whatsapp:+5541XXXXXXXX'
+}
+```
+
+**Webhook Routing**: `/joinConversation` roteia mensagens WhatsApp para o grupo correto
+
+## 🐛 Troubleshooting
+
+### Mensagens não aparecem no WhatsApp
+
+- Verifique se o webhook está configurado no número WhatsApp
+- Verifique se o participante foi adicionado com `messagingBinding` correto
+- Veja os logs no Twilio Console
+
+### Mensagens do WhatsApp não chegam na web
+
+- Verifique se o webhook `/joinConversation` está recebendo as mensagens
+- Verifique se o participante está no Sync Map com `conversationSid` correto
+- Veja os logs das Functions no Twilio Console
+
+### Erro "Forbidden" ao conectar a grupo
+
+- O admin precisa estar adicionado como participante do grupo
+- Isso é feito automaticamente em `createConversation.js`
+
+## 📝 Variáveis de Ambiente Explicadas
+
+| Variável | Descrição | Exemplo |
+|----------|-----------|---------|
+| `ACCOUNT_SID` | Account SID da Twilio | `AC...` |
+| `AUTH_TOKEN` | Auth Token da Twilio | `...` |
+| `SYNC_SERVICE_SID` | SID do Sync Service | `IS...` |
+| `SYNC_MAP_SID` | SID do Sync Map | `MP...` |
+| `CONVERSATIONS_SERVICE_SID` | SID do Conversations Service | `IS...` |
+| `WHATSAPP_NUMBER` | Número WhatsApp sender | `+5541...` |
+| `MESSAGE_SERVICE_SID` | SID do Messaging Service | `MG...` |
+| `TWILIO_API_KEY` | API Key SID | `SK...` |
+| `TWILIO_API_SECRET` | API Key Secret | `...` |
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se livre para abrir issues ou pull requests.
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT.
+
+## 🔗 Links Úteis
+
+- [Twilio Conversations API Docs](https://www.twilio.com/docs/conversations)
+- [Twilio WhatsApp API](https://www.twilio.com/docs/whatsapp)
+- [Twilio Sync Docs](https://www.twilio.com/docs/sync)
+- [Twilio Functions Docs](https://www.twilio.com/docs/runtime/functions)
+
+## 👨‍💻 Autor
+
+Desenvolvido com ❤️ usando Twilio Conversations API
+
+---
+
+**Dúvidas?** Abra uma issue no GitHub!
