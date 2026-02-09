@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Group Manager - Twilio</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+      height: calc(100vh - 40px);
+    }
+
+    .sidebar {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-container {
+      background: white;
+      border-radius: 12px;
+      padding: 0;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .status {
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status.connecting {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .section {
+      margin-bottom: 25px;
+    }
+
+    .section h2 {
+      font-size: 14px;
+      color: #666;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .conversation-info {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      word-break: break-all;
+    }
+
+    .conversation-info strong {
+      display: block;
+      margin-bottom: 5px;
+      color: #333;
+    }
+
+    .participants-list {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 300px;
+    }
+
+    .participant {
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .participant.admin {
+      background: #e3f2fd;
+      border-left: 3px solid #2196F3;
+    }
+
+    .participant-info {
+      flex: 1;
+    }
+
+    .participant-name {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .participant-type {
+      font-size: 11px;
+      color: #666;
+      margin-top: 3px;
+    }
+
+    .btn-remove {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-remove:hover {
+      background: #c82333;
+    }
+
+    .btn-add {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-weight: 600;
+    }
+
+    .btn-add:hover {
+      background: #218838;
+    }
+
+    .chat-header {
+      padding: 20px;
+      background: #667eea;
+      color: white;
+      border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .chat-header h1 {
+      color: white;
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .message {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message.admin {
+      align-items: flex-end;
+    }
+
+    .message-author {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .message-bubble {
+      background: white;
+      padding: 10px 14px;
+      border-radius: 12px;
+      max-width: 70%;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .message.admin .message-bubble {
+      background: #667eea;
+      color: white;
+    }
+
+    .message-text {
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    .message.admin .message-time {
+      color: rgba(255,255,255,0.8);
+    }
+
+    .input-container {
+      padding: 20px;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 10px;
+    }
+
+    input, button {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    input {
+      flex: 1;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #667eea;
+    }
+
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      min-width: 100px;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #5568d3;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .setup-section {
+      margin-top: auto;
+      padding-top: 20px;
+      border-top: 2px solid #f0f0f0;
+    }
+
+    .setup-input {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #999;
+      padding: 40px 20px;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .form-group input:focus {
+      border-color: #667eea;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 25px;
+    }
+
+    .btn-cancel {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-cancel:hover {
+      background: #5a6268;
+    }
+
+    .btn-submit {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-submit:hover {
+      background: #5568d3;
+    }
+
+    .btn-submit:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    /* Setup screen styles */
+    .setup-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      background: #f5f5f5;
+    }
+
+    .setup-card {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    }
+
+    .setup-card h2 {
+      font-size: 28px;
+      color: #333;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .setup-card p {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .setup-options {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .setup-btn {
+      padding: 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+
+    .setup-btn:hover {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+
+    .setup-btn-icon {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .setup-btn-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .setup-btn-desc {
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* Create group form */
+    .participant-item {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      margin-bottom: 15px;
+      align-items: end;
+    }
+
+    .btn-remove-participant {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      min-width: auto;
+    }
+
+    .btn-remove-participant:hover {
+      background: #c82333;
+    }
+
+    .btn-add-more {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    .btn-add-more:hover {
+      background: #218838;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Groups list styles */
+    .group-item {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 12px;
+      border: 2px solid #e0e0e0;
+      transition: all 0.2s;
+    }
+
+    .group-item:hover {
+      border-color: #667eea;
+      background: #f8f9ff;
+    }
+
+    .group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .group-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .group-info {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    .group-info-item {
+      display: inline-block;
+      margin-right: 15px;
+    }
+
+    .group-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-connect {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-connect:hover {
+      background: #5568d3;
+    }
+
+    .btn-delete {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-delete:hover {
+      background: #c82333;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+
+      .sidebar {
+        height: auto;
+      }
+
+      .participant-item {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Tela inicial de setup -->
+  <div id="setupScreen" class="setup-screen">
+    <div class="setup-card">
+      <h2>📱 WhatsApp Group Manager</h2>
+      <p>Crie um novo grupo ou conecte-se a um existente</p>
+
+      <div class="setup-options">
+        <button class="setup-btn" onclick="showCreateGroupModal()">
+          <div class="setup-btn-icon">✨</div>
+          <div class="setup-btn-title">Criar Novo Grupo</div>
+          <div class="setup-btn-desc">Adicione participantes e crie um grupo do zero</div>
+        </button>
+
+        <button class="setup-btn" onclick="showManageGroupsModal()">
+          <div class="setup-btn-icon">📋</div>
+          <div class="setup-btn-title">Gerenciar Grupos</div>
+          <div class="setup-btn-desc">Veja, conecte ou delete grupos existentes</div>
+        </button>
+
+        <button class="setup-btn" onclick="showConnectForm()">
+          <div class="setup-btn-icon">🔗</div>
+          <div class="setup-btn-title">Conectar a Grupo Existente</div>
+          <div class="setup-btn-desc">Use um Conversation SID existente</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interface principal (escondida inicialmente) -->
+  <div class="container hidden" id="mainInterface">
+    <div class="sidebar">
+      <h1>📱 Group Manager</h1>
+
+      <div class="status connecting" id="status">
+        🔄 Conectando...
+      </div>
+
+      <div class="section">
+        <h2>Informações</h2>
+        <div class="conversation-info">
+          <strong>Conversation SID:</strong>
+          <span id="conversationSid">-</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>
+          Participantes (<span id="participantCount">0</span>)
+          <button class="btn-add" onclick="openAddParticipantModal()" id="btnAddParticipant" disabled>
+            ➕ Adicionar
+          </button>
+        </h2>
+        <div class="participants-list" id="participantsList">
+          <div class="empty-state">
+            👥 Nenhum participante ainda
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-section">
+        <button onclick="backToSetup()" style="width: 100%; background: #6c757d;">
+          ← Voltar
+        </button>
+      </div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <h1>💬 WhatsApp Group Chat</h1>
+      </div>
+
+      <div class="messages" id="messages">
+        <div class="empty-state">
+          <div class="empty-state-icon">💬</div>
+          <div>Conecte-se a uma conversa para começar</div>
+        </div>
+      </div>
+
+      <div class="input-container">
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Digite sua mensagem..."
+          disabled
+          onkeypress="if(event.key === 'Enter') sendMessage()"
+        >
+        <button onclick="sendMessage()" id="sendBtn" disabled>
+          Enviar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para criar grupo -->
+  <div class="modal" id="createGroupModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        ✨ Criar Novo Grupo
+      </div>
+      <form onsubmit="createGroup(event)">
+        <div class="form-group">
+          <label for="groupName">Nome do Grupo</label>
+          <input
+            type="text"
+            id="groupName"
+            placeholder="Ex: Grupo da Família, Time de Vendas..."
+            required
+          >
+        </div>
+
+        <p style="color: #666; margin-bottom: 20px; margin-top: 25px;">Adicione os participantes iniciais do grupo:</p>
+
+        <div id="participantsContainer">
+          <div class="participant-item">
+            <div class="form-group" style="margin: 0;">
+              <label>Nome</label>
+              <input type="text" class="participant-name" placeholder="Ex: João Silva" required>
+            </div>
+            <div class="form-group" style="margin: 0;">
+              <label>Telefone</label>
+              <input type="tel" class="participant-phone" placeholder="+5541999999999" required>
+            </div>
+            <button type="button" class="btn-remove-participant" onclick="removeParticipantField(this)">🗑️</button>
+          </div>
+        </div>
+
+        <button type="button" class="btn-add-more" onclick="addParticipantField()">
+          ➕ Adicionar outro participante
+        </button>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeCreateGroupModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-submit" id="btnCreateGroup">
+            Criar Grupo
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal para conectar a grupo existente -->
+  <div class="modal" id="connectModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        🔗 Conectar a Grupo Existente
+      </div>
+      <form onsubmit="connectToExistingConversation(event)">
+        <div class="form-group">
+          <label>Conversation SID</label>
+          <input
+            type="text"
+            id="existingConversationSid"
+            placeholder="CHxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            required
+          >
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeConnectModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-submit">
+            Conectar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal para adicionar participante -->
+  <div class="modal" id="addParticipantModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        ➕ Adicionar Participante
+      </div>
+      <form onsubmit="addParticipant(event)">
+        <div class="form-group">
+          <label for="participantName">Nome</label>
+          <input
+            type="text"
+            id="participantName"
+            placeholder="Ex: João Silva"
+            required
+          >
+        </div>
+        <div class="form-group">
+          <label for="participantPhone">Telefone (WhatsApp)</label>
+          <input
+            type="tel"
+            id="participantPhone"
+            placeholder="Ex: +5541999999999"
+            required
+          >
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" onclick="closeAddParticipantModal()">
+            Cancelar
+          </button>
+          <button type="submit" class="btn-submit" id="btnSubmitParticipant">
+            Adicionar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal para gerenciar grupos -->
+  <div class="modal" id="manageGroupsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        📋 Gerenciar Grupos
+      </div>
+      <div id="groupsList" style="min-height: 200px;">
+        <div style="text-align: center; padding: 40px; color: #999;">
+          <div style="font-size: 32px; margin-bottom: 10px;">⏳</div>
+          Carregando grupos...
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-delete" onclick="deleteAllGroups()" id="btnDeleteAll" style="margin-right: auto;">
+          🗑️ Deletar Todos
+        </button>
+        <button type="button" class="btn-cancel" onclick="closeManageGroupsModal()">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="//media.twiliocdn.com/sdk/js/conversations/v2.4/twilio-conversations.min.js"></script>
+  <script>
+    let conversationsClient;
+    let currentConversation;
+    let currentIdentity = 'admin';
+
+    function showCreateGroupModal() {
+      document.getElementById('createGroupModal').classList.add('active');
+      document.getElementById('groupName').focus();
+    }
+
+    function closeCreateGroupModal() {
+      document.getElementById('createGroupModal').classList.remove('active');
+      document.getElementById('groupName').value = '';
+      // Reset participants
+      document.getElementById('participantsContainer').innerHTML = `
+        <div class="participant-item">
+          <div class="form-group" style="margin: 0;">
+            <label>Nome</label>
+            <input type="text" class="participant-name" placeholder="Ex: João Silva" required>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label>Telefone</label>
+            <input type="tel" class="participant-phone" placeholder="+5541999999999" required>
+          </div>
+          <button type="button" class="btn-remove-participant" onclick="removeParticipantField(this)">🗑️</button>
+        </div>
+      `;
+    }
+
+    function showConnectForm() {
+      document.getElementById('connectModal').classList.add('active');
+    }
+
+    function closeConnectModal() {
+      document.getElementById('connectModal').classList.remove('active');
+    }
+
+    async function showManageGroupsModal() {
+      document.getElementById('manageGroupsModal').classList.add('active');
+      await loadGroupsList();
+    }
+
+    function closeManageGroupsModal() {
+      document.getElementById('manageGroupsModal').classList.remove('active');
+    }
+
+    async function loadGroupsList() {
+      const container = document.getElementById('groupsList');
+      container.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;"><div style="font-size: 32px; margin-bottom: 10px;">⏳</div>Carregando grupos...</div>';
+
+      try {
+        const response = await fetch('/listConversations');
+        const result = await response.json();
+
+        if (result.success && result.conversations.length > 0) {
+          container.innerHTML = '';
+          result.conversations.forEach(group => {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'group-item';
+
+            const date = new Date(group.dateCreated).toLocaleDateString('pt-BR', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric'
+            });
+
+            groupDiv.innerHTML = `
+              <div class="group-header">
+                <div class="group-name">${group.friendlyName || 'Sem nome'}</div>
+              </div>
+              <div class="group-info">
+                <span class="group-info-item">👥 ${group.participantCount} participantes</span>
+                <span class="group-info-item">📅 Criado em ${date}</span>
+              </div>
+              <div class="group-info" style="font-size: 11px; color: #999;">
+                SID: ${group.sid}
+              </div>
+              <div class="group-actions">
+                <button class="btn-connect" onclick="connectToGroupFromList('${group.sid}')">
+                  Conectar
+                </button>
+                <button class="btn-delete" onclick="deleteGroup('${group.sid}', '${group.friendlyName || 'Sem nome'}')">
+                  Deletar
+                </button>
+              </div>
+            `;
+            container.appendChild(groupDiv);
+          });
+        } else {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #999;">
+              <div style="font-size: 48px; margin-bottom: 10px;">📭</div>
+              <div style="font-size: 16px;">Nenhum grupo encontrado</div>
+              <div style="font-size: 13px; margin-top: 8px;">Crie seu primeiro grupo!</div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Error loading groups:', error);
+        container.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: #dc3545;">
+            <div style="font-size: 48px; margin-bottom: 10px;">❌</div>
+            <div>Erro ao carregar grupos</div>
+            <div style="font-size: 13px; margin-top: 8px;">${error.message}</div>
+          </div>
+        `;
+      }
+    }
+
+    async function connectToGroupFromList(conversationSid) {
+      closeManageGroupsModal();
+      await connectToConversation(conversationSid);
+    }
+
+    async function deleteGroup(conversationSid, groupName) {
+      if (!confirm(`Tem certeza que deseja deletar o grupo "${groupName}"?\n\nEsta ação não pode ser desfeita!`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/deleteConversation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            conversationSid: conversationSid
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('✅ Grupo deletado com sucesso!');
+          await loadGroupsList();
+        } else {
+          alert('❌ Erro ao deletar grupo: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error deleting group:', error);
+        alert('❌ Erro ao deletar grupo: ' + error.message);
+      }
+    }
+
+    async function deleteAllGroups() {
+      // Primeira confirmação
+      if (!confirm('⚠️ ATENÇÃO!\n\nVocê está prestes a deletar TODOS os grupos!\n\nEsta ação é IRREVERSÍVEL!\n\nDeseja continuar?')) {
+        return;
+      }
+
+      // Segunda confirmação (segurança extra)
+      const confirmation = prompt('Digite "DELETAR TUDO" (em maiúsculas) para confirmar:');
+      if (confirmation !== 'DELETAR TUDO') {
+        alert('❌ Operação cancelada.');
+        return;
+      }
+
+      const btn = document.getElementById('btnDeleteAll');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+
+      try {
+        // Buscar todos os grupos
+        const response = await fetch('/listConversations');
+        const result = await response.json();
+
+        if (!result.success || result.conversations.length === 0) {
+          alert('ℹ️ Nenhum grupo para deletar.');
+          btn.disabled = false;
+          btn.textContent = originalText;
+          return;
+        }
+
+        const total = result.conversations.length;
+        let deleted = 0;
+
+        btn.textContent = `Deletando 0/${total}...`;
+
+        // Deletar cada grupo
+        for (const group of result.conversations) {
+          try {
+            const deleteResponse = await fetch('/deleteConversation', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: new URLSearchParams({
+                conversationSid: group.sid
+              })
+            });
+
+            const deleteResult = await deleteResponse.json();
+            if (deleteResult.success) {
+              deleted++;
+              btn.textContent = `Deletando ${deleted}/${total}...`;
+            }
+          } catch (error) {
+            console.error(`Error deleting group ${group.sid}:`, error);
+          }
+        }
+
+        btn.textContent = originalText;
+        btn.disabled = false;
+
+        alert(`✅ ${deleted} de ${total} grupos deletados com sucesso!\n\n🎉 Pronto para a demo!`);
+        await loadGroupsList();
+
+      } catch (error) {
+        console.error('Error deleting all groups:', error);
+        alert('❌ Erro ao deletar grupos: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+    function addParticipantField() {
+      const container = document.getElementById('participantsContainer');
+      const newField = document.createElement('div');
+      newField.className = 'participant-item';
+      newField.innerHTML = `
+        <div class="form-group" style="margin: 0;">
+          <label>Nome</label>
+          <input type="text" class="participant-name" placeholder="Ex: João Silva" required>
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label>Telefone</label>
+          <input type="tel" class="participant-phone" placeholder="+5541999999999" required>
+        </div>
+        <button type="button" class="btn-remove-participant" onclick="removeParticipantField(this)">🗑️</button>
+      `;
+      container.appendChild(newField);
+    }
+
+    function removeParticipantField(btn) {
+      const items = document.querySelectorAll('.participant-item');
+      if (items.length > 1) {
+        btn.closest('.participant-item').remove();
+      } else {
+        alert('Você precisa ter pelo menos um participante!');
+      }
+    }
+
+    async function createGroup(event) {
+      event.preventDefault();
+
+      const btn = document.getElementById('btnCreateGroup');
+      btn.disabled = true;
+      btn.textContent = 'Criando grupo...';
+
+      const groupName = document.getElementById('groupName').value.trim();
+
+      // Coletar participantes
+      const participants = [];
+      document.querySelectorAll('.participant-item').forEach(item => {
+        const name = item.querySelector('.participant-name').value.trim();
+        const phone = item.querySelector('.participant-phone').value.trim();
+        participants.push({ name, phone });
+      });
+
+      try {
+        const response = await fetch('/createConversation', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            groupName: groupName,
+            participants: JSON.stringify(participants)
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          console.log('Grupo criado:', result.conversationSid);
+          closeCreateGroupModal();
+
+          // Conectar automaticamente ao grupo criado
+          await connectToConversation(result.conversationSid);
+        } else {
+          alert('❌ Erro ao criar grupo: ' + result.error);
+          btn.disabled = false;
+          btn.textContent = 'Criar Grupo';
+        }
+      } catch (error) {
+        console.error('Error creating group:', error);
+        alert('❌ Erro ao criar grupo: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = 'Criar Grupo';
+      }
+    }
+
+    async function connectToExistingConversation(event) {
+      event.preventDefault();
+      const conversationSid = document.getElementById('existingConversationSid').value.trim();
+      closeConnectModal();
+      await connectToConversation(conversationSid);
+    }
+
+    async function connectToConversation(conversationSid) {
+      if (!conversationSid) {
+        alert('Por favor, forneça o Conversation SID');
+        return;
+      }
+
+      // Mostrar interface principal e esconder setup
+      document.getElementById('setupScreen').classList.add('hidden');
+      document.getElementById('mainInterface').classList.remove('hidden');
+
+      updateStatus('connecting', '🔄 Conectando...');
+
+      try {
+        // Get token from backend
+        console.log('Fetching token...');
+        const response = await fetch(`/getToken?identity=${currentIdentity}`);
+        const data = await response.json();
+        console.log('Token received:', data);
+
+        // Initialize Conversations Client
+        console.log('Initializing Conversations Client...');
+        conversationsClient = await Twilio.Conversations.Client.create(data.token);
+        console.log('Client created successfully');
+
+        // Get conversation
+        console.log('Getting conversation:', conversationSid);
+        currentConversation = await conversationsClient.getConversationBySid(conversationSid);
+        console.log('Conversation retrieved');
+
+        // Join as participant if not already
+        try {
+          await currentConversation.join();
+          console.log('Joined conversation');
+        } catch (e) {
+          console.log('Already a participant or error joining:', e.message);
+        }
+
+        // Update UI
+        document.getElementById('conversationSid').textContent = conversationSid;
+        updateStatus('connected', '✅ Conectado');
+
+        // Enable chat
+        document.getElementById('messageInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('btnAddParticipant').disabled = false;
+
+        // Load messages
+        loadMessages();
+
+        // Load participants
+        loadParticipants();
+
+        // Listen for new messages
+        currentConversation.on('messageAdded', (message) => {
+          addMessageToUI(message);
+        });
+
+        // Listen for participant changes
+        currentConversation.on('participantJoined', loadParticipants);
+        currentConversation.on('participantLeft', loadParticipants);
+
+      } catch (error) {
+        console.error('Error:', error);
+        updateStatus('connecting', '❌ Erro ao conectar: ' + error.message);
+      }
+    }
+
+    function backToSetup() {
+      document.getElementById('mainInterface').classList.add('hidden');
+      document.getElementById('setupScreen').classList.remove('hidden');
+
+      // Reset state
+      if (currentConversation) {
+        currentConversation.removeAllListeners();
+      }
+      currentConversation = null;
+      conversationsClient = null;
+
+      document.getElementById('messages').innerHTML = '<div class="empty-state"><div class="empty-state-icon">💬</div><div>Conecte-se a uma conversa para começar</div></div>';
+      document.getElementById('messageInput').disabled = true;
+      document.getElementById('sendBtn').disabled = true;
+      document.getElementById('btnAddParticipant').disabled = true;
+    }
+
+    async function loadMessages() {
+      const messages = await currentConversation.getMessages();
+      document.getElementById('messages').innerHTML = '';
+
+      messages.items.forEach(message => {
+        addMessageToUI(message);
+      });
+
+      scrollToBottom();
+    }
+
+    async function loadParticipants() {
+      const participants = await currentConversation.getParticipants();
+      const list = document.getElementById('participantsList');
+
+      list.innerHTML = '';
+
+      participants.forEach(participant => {
+        const div = document.createElement('div');
+        div.className = 'participant' + (participant.identity === currentIdentity ? ' admin' : '');
+
+        const name = participant.identity ||
+                    (participant.attributes && participant.attributes.name) ||
+                    participant.messagingBinding?.address ||
+                    'Participante';
+
+        const type = participant.messagingBinding?.type || 'web';
+        const isAdmin = participant.identity === currentIdentity;
+
+        div.innerHTML = `
+          <div class="participant-info">
+            <div class="participant-name">${name}</div>
+            <div class="participant-type">${type === 'whatsapp' ? '📱 WhatsApp' : '💻 Web'}</div>
+          </div>
+          ${!isAdmin ? `<button class="btn-remove" onclick="removeParticipant('${participant.sid}')">Remover</button>` : ''}
+        `;
+
+        list.appendChild(div);
+      });
+
+      document.getElementById('participantCount').textContent = participants.length;
+    }
+
+    function addMessageToUI(message) {
+      const messagesDiv = document.getElementById('messages');
+      const messageDiv = document.createElement('div');
+
+      const isAdmin = message.author === currentIdentity;
+      messageDiv.className = 'message' + (isAdmin ? ' admin' : '');
+
+      const time = new Date(message.dateCreated).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      messageDiv.innerHTML = `
+        <div class="message-author">${message.author || 'System'}</div>
+        <div class="message-bubble">
+          <div class="message-text">${escapeHtml(message.body)}</div>
+          <div class="message-time">${time}</div>
+        </div>
+      `;
+
+      messagesDiv.appendChild(messageDiv);
+      scrollToBottom();
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const message = input.value.trim();
+
+      if (!message || !currentConversation) return;
+
+      try {
+        await currentConversation.sendMessage(message);
+        input.value = '';
+      } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Erro ao enviar mensagem: ' + error.message);
+      }
+    }
+
+    function openAddParticipantModal() {
+      document.getElementById('addParticipantModal').classList.add('active');
+      document.getElementById('participantName').focus();
+    }
+
+    function closeAddParticipantModal() {
+      document.getElementById('addParticipantModal').classList.remove('active');
+      document.getElementById('participantName').value = '';
+      document.getElementById('participantPhone').value = '';
+    }
+
+    async function addParticipant(event) {
+      event.preventDefault();
+
+      const name = document.getElementById('participantName').value.trim();
+      const phoneNumber = document.getElementById('participantPhone').value.trim();
+      const submitBtn = document.getElementById('btnSubmitParticipant');
+
+      if (!name || !phoneNumber) {
+        alert('Por favor, preencha nome e telefone');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adicionando...';
+
+      try {
+        const response = await fetch('/addParticipant', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            phoneNumber: phoneNumber,
+            name: name
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert(`✅ ${name} foi adicionado ao grupo e receberá o convite no WhatsApp!`);
+          closeAddParticipantModal();
+          setTimeout(loadParticipants, 2000);
+        } else {
+          alert('❌ Erro ao adicionar participante: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error adding participant:', error);
+        alert('❌ Erro ao adicionar participante: ' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Adicionar';
+      }
+    }
+
+    async function removeParticipant(participantSid) {
+      if (!confirm('Tem certeza que deseja remover este participante?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/removeParticipant', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            participantSid: participantSid
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('✅ Participante removido do grupo!');
+          loadParticipants();
+        } else {
+          alert('❌ Erro ao remover participante: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error removing participant:', error);
+        alert('❌ Erro ao remover participante: ' + error.message);
+      }
+    }
+
+    function updateStatus(className, text) {
+      const status = document.getElementById('status');
+      status.className = 'status ' + className;
+      status.textContent = text;
+    }
+
+    function scrollToBottom() {
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Close modals when clicking outside
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+          this.classList.remove('active');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

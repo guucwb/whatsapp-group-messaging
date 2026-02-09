@@ -1,0 +1,43 @@
+# Twilio credentials and secrets
+.env
+.twiliodeployinfo
+.twilioserverlessrc
+
+# Node modules
+node_modules/
+
+# Temporary files
+*.log
+*.tmp
+
+# Debug scripts (não precisam ir pro repo)
+add-*.js
+check-*.js
+clean-*.js
+configurar-*.js
+corrigir-*.js
+create-*.js
+criar-*.js
+debug-*.js
+desabilitar-*.js
+diagnose.js
+diagnostico-*.js
+find-*.js
+fix-*.js
+force-*.js
+investigar-*.js
+limpar-*.js
+move-*.js
+remover-*.js
+reset-*.js
+setup-*.js
+test-*.js
+update-*.js
+verificar-*.js
+verify.js
+
+# Markdown docs (manter só README se tiver)
+COMO_TESTAR.md
+DEPLOYMENT_INFO.md
+GUIA_FINAL.md
+MANUAL_STEPS.md
