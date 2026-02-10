@@ -33,14 +33,12 @@ exports.handler = async function(context, event, callback) {
       })
       .catch(() => {}); // Ignora se já existe
 
-    // Enviar mensagem ATRAVÉS DA CONVERSATION
-    await client.conversations.v1
-      .services(context.CONVERSATIONS_SERVICE_SID)
-      .conversations(context.CONVERSATION_SID)
-      .messages.create({
-        author: 'admin',
-        body: `Olá ${name}! Você foi adicionado ao grupo. Responda esta mensagem para começar a participar! 👋`
-      });
+    // Enviar Content Template via Messages API
+    await client.messages.create({
+      contentSid: context.CONTENT_SID,
+      from: context.MESSAGE_SERVICE_SID,
+      to: address
+    });
 
     const response = new Twilio.Response();
     response.appendHeader('Access-Control-Allow-Origin', '*');

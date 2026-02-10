@@ -69,15 +69,12 @@ exports.handler = async function(context, event, callback) {
           'messagingBinding.proxyAddress': `whatsapp:${context.WHATSAPP_NUMBER}`
         });
 
-      // Enviar mensagem ATRAVÉS DA CONVERSATION
-      // Isso garante que as respostas venham para a mesma conversation!
-      await client.conversations.v1
-        .services(context.CONVERSATIONS_SERVICE_SID)
-        .conversations(conversation.sid)
-        .messages.create({
-          author: 'admin',
-          body: `Olá ${participant.name}! Você foi adicionado ao grupo "${groupName}". Responda esta mensagem para começar a participar! 👋`
-        });
+      // Enviar Content Template via Messages API
+      await client.messages.create({
+        contentSid: context.CONTENT_SID,
+        from: context.MESSAGE_SERVICE_SID,
+        to: address
+      });
     }
 
     const response = new Twilio.Response();
